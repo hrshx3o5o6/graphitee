@@ -12,6 +12,12 @@ uv sync
 
 # Install Playwright browsers
 uv run playwright install chromium
+
+# Install and setup Ollama (for Phase 3)
+# macOS/Linux:
+brew install ollama
+ollama serve
+ollama pull llama3.1:8b
 ```
 
 ## Usage
@@ -50,6 +56,31 @@ uv run python semantic_builder.py --all
 
 **Output**: `data/semantic_blocks/<doc_id>.json` - Semantic blocks with context and metadata
 
+### Phase 3: Concept Extraction
+
+Extract technical concepts from semantic blocks using local LLM (Ollama).
+
+```bash
+# List available documents
+uv run python concept_extractor.py --list
+
+# Process a specific document
+uv run python concept_extractor.py <doc_id> --debug
+
+# Process all documents
+uv run python concept_extractor.py --all
+
+# Test with limited blocks
+uv run python concept_extractor.py <doc_id> --max-blocks 5
+
+# Use different model or confidence threshold
+uv run python concept_extractor.py <doc_id> --model llama3.1:8b --min-confidence 0.6
+```
+
+**Output**: `data/concepts/<doc_id>_concepts.json` - Extracted concept candidates
+
+**Requirements**: Ollama must be running locally with llama3.1:8b model
+
 ## Architecture
 
 ### Phase 1: Scraper
@@ -67,9 +98,19 @@ uv run python semantic_builder.py --all
   - `tokenizer.py`: Token estimation
   - `validator.py`: Validation logic
 
+### Phase 3: Concept Extractor
+- **concepts/**: LLM-based concept extraction
+  - `models.py`: ConceptCandidate data model
+  - `pipeline.py`: Main extraction pipeline
+  - `extractor.py`: Ollama API integration
+  - `prompts.py`: LLM prompt templates
+  - `parser.py`: JSON output parsing
+  - `filters.py`: Concept quality filters
+
 ### Storage
 - **data/docs/**: Phase 1 extracted documents
 - **data/semantic_blocks/**: Phase 2 semantic blocks
+- **data/concepts/**: Phase 3 concept candidates
 
 ## Features
 
@@ -79,9 +120,17 @@ uv run python semantic_builder.py --all
 - Controlled internal link crawling
 - Clean section tree building
 
-### Phase 2 (NEW)
+### Phase 2
 - Deterministic semantic splitting (no AI/LLM)
 - Context-aware blocks with full heading paths
 - Heuristic-based type classification (definition, example, explanation, code, list)
 - Token estimation for downstream processing
 - Validation and statistics
+
+### Phase 3 (NEW)
+- Local LLM concept extraction via Ollama
+- Structured extraction (NOT summarization)
+- Quality filtering (removes generic terms)
+- Concept types: core_concept, technique, metric, process, assumption
+- Confidence scoring and validation
+- Full source traceability (block → concept)
