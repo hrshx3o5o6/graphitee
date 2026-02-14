@@ -1,6 +1,6 @@
 # Complete Workflow Example
 
-This guide shows how to run all six phases to build a semantic knowledge graph.
+This guide shows how to run all seven phases to build and visualize a semantic knowledge graph.
 
 ## Prerequisites
 
@@ -136,6 +136,35 @@ This refines the graph by filtering weak edges, resolving conflicts, computing m
 
 **Note**: First time runs `uv sync` to install NetworkX if needed.
 
+### Step 7: Visualize Knowledge Graph (Interactive 3D)
+
+```bash
+# First, build the frontend (one-time setup)
+cd frontend
+npm install
+npm run build
+cd ..
+
+# Start the visualization server
+uv run python viz_server.py
+
+# Or with custom port
+uv run python viz_server.py --port 8080
+```
+
+This opens an interactive 3D visualization in your browser at `http://localhost:8000`.
+
+**Features**:
+- 3D force-directed graph layout with physics simulation
+- Visual encoding: node size = importance, colors = types/relations
+- Interactive highlighting: hover highlights node + neighbors
+- Node details panel: aliases, metrics, connections
+- Camera controls: rotate, zoom, pan, double-click to focus
+- Multi-graph support: dropdown to switch between documents
+- Real-time stats: node/edge counts, relation types
+
+**Note**: Requires Node.js/npm. Frontend build is one-time unless code changes. Pure visualization - no AI/LLM processing.
+
 ## Understanding the Output
 
 ### Phase 1 Output (docs)
@@ -244,6 +273,22 @@ This refines the graph by filtering weak edges, resolving conflicts, computing m
 }
 ```
 
+### Phase 7 Output (interactive visualization)
+- **Browser UI**: 3D graph visualization at `http://localhost:8000`
+- **Visual Encoding**:
+  - Node size: Importance score (larger = more important)
+  - Node color: Concept type (9 colors: core_concept, technique, metric, etc.)
+  - Edge width: Confidence/weight (thicker = higher confidence)
+  - Edge color: Relation type (9 colors: DEFINES, USES, REQUIRES, etc.)
+- **Interactions**:
+  - Hover: Highlights node and its neighbors
+  - Click: Opens details panel with aliases, metrics, connections
+  - Double-click: Focuses camera on node
+  - Drag to rotate, scroll to zoom
+  - Panel connections: Click to navigate to related nodes
+- **Graph Selector**: Dropdown to visualize any final graph from `data/graph/`
+- **No files created**: Pure visualization, reads from existing final_graph.json files
+
 ## Tips
 
 ### For Phase 1
@@ -287,6 +332,17 @@ This refines the graph by filtering weak edges, resolving conflicts, computing m
 - NetworkX automatically installed via `uv sync` if needed
 - Graph metrics help identify most important concepts
 - Typical output: 20-40 nodes, 30-50 edges after refinement
+
+### For Phase 7
+- Requires Phase 6 final graphs to exist in `data/graph/`
+- Frontend build is one-time (unless you modify frontend code)
+- Node.js 18+ recommended for frontend build
+- Server auto-opens browser on start
+- Use arrow keys + mouse for camera navigation
+- Color legend shown in UI for node types and relation types
+- Best viewed in Chrome or Firefox (WebGL required)
+- No AI/LLM processing - pure deterministic visualization
+- Graph data loaded via REST API from Python server
 
 ## Troubleshooting
 
@@ -343,23 +399,25 @@ uv run python concept_normalizer.py <doc_id>
 
 ## Next Steps
 
-After Phase 6, you have:
+After Phase 7, you have:
 - Original documents (Phase 1)
 - Semantic blocks (Phase 2)  
 - Concept candidates (Phase 3)
 - Canonical concepts (Phase 4)
 - Concept relationships (Phase 5)
-- **Refined knowledge graph** (Phase 6) ✨
+- Refined knowledge graph (Phase 6)
+- **Interactive 3D visualization** (Phase 7) ✨
 
-**Complete, Production-Ready Knowledge Graph**:
+**Complete, Production-Ready Knowledge Graph Pipeline**:
 - High-quality nodes with importance scores
 - Validated edges with confidence weights
 - Graph metrics and structural analysis
-- Visualization-ready format
+- Interactive 3D exploration interface
+- Visual encoding and navigation
 
-Phase 7 (future) will:
-- Create interactive 3D graph visualizations
-- Implement graph exploration UI
-- Add semantic search over graph
+**Future Enhancements**:
+- Semantic search over graph
 - Export to graph databases (Neo4j, ArangoDB, etc.)
-- Generate graph insights and summaries
+- Graph insights and automated summaries
+- Multi-document graph merging
+- Temporal graph evolution tracking

@@ -166,6 +166,37 @@ uv run python graph_refiner.py <doc_id> --no-prune
 - Node importance scoring
 - Optional isolated node pruning
 
+### Phase 7: Interactive 3D Visualization
+
+3D interactive visualization of the knowledge graph using React + Three.js.
+
+```bash
+# First, build the frontend (one-time setup)
+cd frontend
+npm install
+npm run build
+cd ..
+
+# Start the visualization server
+uv run python viz_server.py
+
+# Or with custom port
+uv run python viz_server.py --port 8080
+```
+
+**Output**: Opens browser at `http://localhost:8000` with interactive 3D graph
+
+**Key Features**:
+- 3D force-directed graph layout (react-force-graph-3d)
+- Visual encoding: node size = importance, node color = type
+- Edge coloring by relation type with 9-color palette
+- Interactive highlighting (hover to highlight node + neighbors)
+- Node details panel (aliases, metrics, connections)
+- Camera controls (rotate, zoom, pan, double-click focus)
+- Graph selection dropdown (visualize any final graph)
+- Real-time stats (nodes, edges, relations, types)
+- No AI/LLM processing - pure deterministic visualization
+
 ## Architecture
 
 ### Phase 1: Scraper
@@ -222,6 +253,18 @@ uv run python graph_refiner.py <doc_id> --no-prune
   - `scoring.py`: Node importance scoring
   - `assembler.py`: Final graph assembly and pruning
 
+### Phase 7: Visualization
+- **frontend/**: React + Vite 3D visualization app
+  - `src/App.jsx`: Main application orchestrator
+  - `src/GraphView.jsx`: 3D ForceGraph3D component
+  - `src/NodePanel.jsx`: Node details sidebar
+  - `src/graphLoader.js`: API integration and visual encoding
+  - `package.json`: Dependencies (react-force-graph-3d, Three.js)
+- **viz_server.py**: HTTP server with REST API
+  - `/api/graphs`: List available graphs
+  - `/api/graph/<id>`: Get graph data
+  - Serves frontend static files from `dist/`
+
 ### Storage
 - **data/docs/**: Phase 1 extracted documents
 - **data/semantic_blocks/**: Phase 2 semantic blocks
@@ -269,7 +312,7 @@ uv run python graph_refiner.py <doc_id> --no-prune
 - Edge validation and deduplication
 - Creates complete knowledge graph (nodes + edges)
 
-### Phase 6 (NEW)
+### Phase 6
 - Graph structure validation (removes invalid edges, self-loops)
 - Edge quality filtering (confidence thresholds)
 - Duplicate edge merging with aggregated evidence
@@ -278,3 +321,14 @@ uv run python graph_refiner.py <doc_id> --no-prune
 - Node importance scoring (occurrence + centrality)
 - Optional isolated node pruning
 - Visualization-ready output format
+
+### Phase 7 (NEW)
+- 3D force-directed graph visualization (react-force-graph-3d)
+- Visual encoding: size=importance, color=type/relation
+- Interactive node highlighting and navigation
+- Node details panel with metrics and connections
+- Camera controls (rotate, zoom, pan, focus)
+- Multi-graph support (dropdown selector)
+- REST API for graph data access
+- Pure visualization (no AI/LLM, no graph modification)
+- Requires Node.js for frontend build
