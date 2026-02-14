@@ -1,6 +1,6 @@
 # Complete Workflow Example
 
-This guide shows how to run all three phases to build a semantic knowledge graph.
+This guide shows how to run all four phases to build a semantic knowledge graph.
 
 ## Prerequisites
 
@@ -73,6 +73,28 @@ uv run python concept_extractor.py --all
 
 This extracts technical concepts using the local LLM.
 
+### Step 4: Normalize Concepts
+
+```bash
+# Normalize concepts into canonical forms
+uv run python concept_normalizer.py <doc_id> --debug
+
+# Process all documents
+uv run python concept_normalizer.py --all
+
+# Skip LLM verification for faster processing (less accurate)
+uv run python concept_normalizer.py <doc_id> --skip-verification
+
+# Adjust similarity threshold (default: 0.80)
+uv run python concept_normalizer.py <doc_id> --similarity-threshold 0.85
+
+# Output: data/canonical/<doc_id>_canonical.json
+```
+
+This merges duplicate concepts and variants into canonical concepts with aliases.
+
+**Note**: First run downloads sentence-transformers model (~80MB).
+
 ## Understanding the Output
 
 ### Phase 1 Output (docs)
@@ -118,6 +140,23 @@ This extracts technical concepts using the local LLM.
 ]
 ```
 
+### Phase 4 Output (canonical)
+```json
+[
+  {
+    "canonical_id": "cn_001",
+    "canonical_name": "End-to-End Testing",
+    "aliases": ["E2E Testing", "e2e testing", "end to end testing"],
+    "type": "core_concept",
+    "importance_score": 8.5,
+    "total_mentions": 12,
+    "documents_present": 3,
+    "descriptions": ["Testing approach that validates complete application workflows"],
+    "source_concepts": ["c_001", "c_045", "c_089"]
+  }
+]
+```
+
 ## Tips
 
 ### For Phase 1
@@ -136,6 +175,13 @@ This extracts technical concepts using the local LLM.
 - Check concept quality in output
 - Adjust `--min-confidence` to filter concepts
 - Phase 3 can take time (LLM calls per block)
+
+### For Phase 4
+- First run downloads sentence-transformers model (~80MB)
+- Use `--debug` to see clustering details
+- LLM verification is recommended for accuracy (can skip with `--skip-verification`)
+- Similarity threshold 0.80 works well (0.75-0.85 range)
+- Expect 50-70% reduction in concept count (duplicates merged)
 
 ## Troubleshooting
 
@@ -163,19 +209,31 @@ uv run python main.py https://example.com/article
 uv run python semantic_builder.py <doc_id>
 ```
 
+### "Concepts not found"
+```bash
+# Run Phase 3 first
+uv run python concept_extractor.py <doc_id>
+```
+
 ### Phase 3 is very slow
 - Use `--max-blocks 10` for testing
 - LLM inference takes time locally
 - Consider using a faster model for testing
 
+### Phase 4 "Model download failed"
+- First run downloads ~80MB sentence-transformers model
+- Ensure stable internet connection
+- Model caches in ~/.cache/torch/sentence_transformers/
+
 ## Next Steps
 
-After Phase 3, you have:
+After Phase 4, you have:
 - Original documents (Phase 1)
 - Semantic blocks (Phase 2)  
 - Concept candidates (Phase 3)
+- Canonical concepts (Phase 4)
 
-Phase 4 (future) will:
-- Merge duplicate concepts
-- Build relationships between concepts
-- Create the final knowledge graph
+Phase 5 (future) will:
+- Extract relationships between concepts
+- Build the final knowledge graph
+- Create graph visualization

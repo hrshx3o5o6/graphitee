@@ -81,6 +81,33 @@ uv run python concept_extractor.py <doc_id> --model llama3.1:8b --min-confidence
 
 **Requirements**: Ollama must be running locally with llama3.1:8b model
 
+### Phase 4: Concept Normalization
+
+Normalize concept candidates into canonical concepts by merging duplicates and variants.
+
+```bash
+# List available documents
+uv run python concept_normalizer.py --list
+
+# Process a specific document
+uv run python concept_normalizer.py <doc_id> --debug
+
+# Process all documents
+uv run python concept_normalizer.py --all
+
+# Skip LLM verification (faster, less accurate)
+uv run python concept_normalizer.py <doc_id> --skip-verification
+
+# Adjust similarity threshold
+uv run python concept_normalizer.py <doc_id> --similarity-threshold 0.85
+```
+
+**Output**: `data/canonical/<doc_id>_canonical.json` - Normalized canonical concepts
+
+**Requirements**: 
+- First run of Phase 4 will download sentence-transformers model (~80MB)
+- LLM verification requires Ollama (can be skipped with `--skip-verification`)
+
 ## Architecture
 
 ### Phase 1: Scraper
