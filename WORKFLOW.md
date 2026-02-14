@@ -1,6 +1,6 @@
 # Complete Workflow Example
 
-This guide shows how to run all five phases to build a semantic knowledge graph.
+This guide shows how to run all six phases to build a semantic knowledge graph.
 
 ## Prerequisites
 
@@ -114,6 +114,28 @@ This extracts relationships between concepts to build knowledge graph edges.
 
 **Note**: Requires Ollama to be running. Only extracts relationships grounded in text (no hallucination).
 
+### Step 6: Refine and Assemble Final Graph
+
+```bash
+# Refine graph structure and compute metrics
+uv run python graph_refiner.py <doc_id> --debug
+
+# Process all documents
+uv run python graph_refiner.py --all
+
+# Adjust confidence threshold
+uv run python graph_refiner.py <doc_id> --min-confidence 0.6
+
+# Save visualization-ready format (minimal payload)
+uv run python graph_refiner.py <doc_id> --viz-format
+
+# Output: data/graph/<doc_id>_final_graph.json
+```
+
+This refines the graph by filtering weak edges, resolving conflicts, computing metrics, and scoring node importance.
+
+**Note**: First time runs `uv sync` to install NetworkX if needed.
+
 ## Understanding the Output
 
 ### Phase 1 Output (docs)
@@ -190,6 +212,38 @@ This extracts relationships between concepts to build knowledge graph edges.
 ]
 ```
 
+### Phase 6 Output (final_graph)
+```json
+{
+  "nodes": [
+    {
+      "id": "cn_001",
+      "label": "End-to-End Testing",
+      "type": "core_concept",
+      "importance": 0.82,
+      "metrics": {
+        "degree_centrality": 0.45,
+        "betweenness_centrality": 0.38,
+        "clustering_coefficient": 0.15
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "cn_012",
+      "target": "cn_001",
+      "relation": "USES",
+      "weight": 0.92
+    }
+  ],
+  "metadata": {
+    "num_nodes": 28,
+    "num_edges": 35,
+    "graph_metrics": {...}
+  }
+}
+```
+
 ## Tips
 
 ### For Phase 1
@@ -223,6 +277,16 @@ This extracts relationships between concepts to build knowledge graph edges.
 - Use `--debug` to see candidate pairs and extraction details
 - Relationships are directional (source → target)
 - Confidence reflects how clearly the relationship is stated in text
+
+### For Phase 6
+- Requires both Phase 4 (canonical concepts) and Phase 5 (relationships)
+- Default confidence threshold (0.55) works well for most cases
+- Use `--debug` to see validation, refinement, and scoring details
+- `--viz-format` creates minimal payload optimized for visualization
+- `--no-prune` keeps isolated nodes (useful for debugging)
+- NetworkX automatically installed via `uv sync` if needed
+- Graph metrics help identify most important concepts
+- Typical output: 20-40 nodes, 30-50 edges after refinement
 
 ## Troubleshooting
 
@@ -279,17 +343,23 @@ uv run python concept_normalizer.py <doc_id>
 
 ## Next Steps
 
-After Phase 5, you have:
+After Phase 6, you have:
 - Original documents (Phase 1)
 - Semantic blocks (Phase 2)  
 - Concept candidates (Phase 3)
 - Canonical concepts (Phase 4)
 - Concept relationships (Phase 5)
+- **Refined knowledge graph** (Phase 6) ✨
 
-**Complete Knowledge Graph**: Nodes (canonical concepts) + Edges (relationships)
+**Complete, Production-Ready Knowledge Graph**:
+- High-quality nodes with importance scores
+- Validated edges with confidence weights
+- Graph metrics and structural analysis
+- Visualization-ready format
 
-Phase 6 (future) will:
-- Refine and prune weak edges
-- Score graph structure quality
-- Create interactive graph visualizations
-- Export to graph databases (Neo4j, etc.)
+Phase 7 (future) will:
+- Create interactive 3D graph visualizations
+- Implement graph exploration UI
+- Add semantic search over graph
+- Export to graph databases (Neo4j, ArangoDB, etc.)
+- Generate graph insights and summaries

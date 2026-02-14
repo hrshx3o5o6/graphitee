@@ -132,6 +132,40 @@ uv run python relationship_extractor.py <doc_id> --model llama3.2:latest
 
 **Relation Types**: DEFINES, DEPENDS_ON, CAUSES, PART_OF, USES, EXTENDS, CONTRASTS_WITH, MEASURED_BY, ASSOCIATED_WITH
 
+### Phase 6: Graph Refinement & Final Assembly
+
+Refine and assemble the final knowledge graph from canonical concepts and relationships.
+
+```bash
+# List available documents
+uv run python graph_refiner.py --list
+
+# Process a specific document
+uv run python graph_refiner.py <doc_id> --debug
+
+# Process all documents
+uv run python graph_refiner.py --all
+
+# Adjust confidence threshold
+uv run python graph_refiner.py <doc_id> --min-confidence 0.6
+
+# Save visualization format (minimal payload)
+uv run python graph_refiner.py <doc_id> --viz-format
+
+# Keep isolated nodes (don't prune)
+uv run python graph_refiner.py <doc_id> --no-prune
+```
+
+**Output**: `data/graph/<doc_id>_final_graph.json` - Refined knowledge graph ready for visualization
+
+**Key Features**:
+- Edge quality filtering (removes low confidence < 0.55)
+- Duplicate edge merging
+- Conflict resolution with relation priority
+- Graph metrics (centrality, clustering)
+- Node importance scoring
+- Optional isolated node pruning
+
 ## Architecture
 
 ### Phase 1: Scraper
@@ -178,29 +212,24 @@ uv run python relationship_extractor.py <doc_id> --model llama3.2:latest
   - `parser.py`: JSON output parsing
   - `validator.py`: Edge validation and deduplication
 
+### Phase 6: Graph Refiner
+- **graph/**: Graph refinement and assembly
+  - `models.py`: GraphNode, GraphEdge, FinalGraph models
+  - `pipeline.py`: Main refinement pipeline
+  - `validator.py`: Graph structure validation
+  - `edge_refiner.py`: Edge merging, filtering, conflict resolution
+  - `metrics.py`: NetworkX-based graph metrics
+  - `scoring.py`: Node importance scoring
+  - `assembler.py`: Final graph assembly and pruning
+
 ### Storage
-- Local LLM concept extraction via Ollama
-- Structured extraction (NOT summarization)
-- Quality filtering (removes generic terms)
-- Concept types: core_concept, technique, metric, process, assumption
-- Confidence scoring and validation
-- Full source traceability (block → concept)
+- **data/docs/**: Phase 1 extracted documents
+- **data/semantic_blocks/**: Phase 2 semantic blocks
+- **data/concepts/**: Phase 3 concept candidates
+- **data/canonical/**: Phase 4 canonical concepts
+- **data/relationships/**: Phase 5 concept edges
+- **data/graph/**: Phase 6 final refined graphs
 
-### Phase 4
-- String normalization and exact deduplication
-- Semantic similarity clustering (sentence-transformers)
-- LLM verification to prevent bad merges
-- Canonical name selection and alias tracking
-- Importance scoring based on frequency and spread
-- Typical 50-70% reduction in concept count
-
-### Phase 5 (NEW)
-- Text-grounded relationship extraction (NO hallucination)
-- Strict relation type ontology (9 types)
-- Block-level concept co-occurrence analysis
-- LLM-based relationship identification
-- Edge validation and deduplication
-- Creates complete knowledge graph (nodes + edges
 ## Features
 
 ### Phase 1
@@ -216,10 +245,36 @@ uv run python relationship_extractor.py <doc_id> --model llama3.2:latest
 - Token estimation for downstream processing
 - Validation and statistics
 
-### Phase 3 (NEW)
+### Phase 3
 - Local LLM concept extraction via Ollama
 - Structured extraction (NOT summarization)
 - Quality filtering (removes generic terms)
 - Concept types: core_concept, technique, metric, process, assumption
 - Confidence scoring and validation
 - Full source traceability (block → concept)
+
+### Phase 4
+- String normalization and exact deduplication
+- Semantic similarity clustering (sentence-transformers)
+- LLM verification to prevent bad merges
+- Canonical name selection and alias tracking
+- Importance scoring based on frequency and spread
+- Typical 50-70% reduction in concept count
+
+### Phase 5
+- Text-grounded relationship extraction (NO hallucination)
+- Strict relation type ontology (9 types)
+- Block-level concept co-occurrence analysis
+- LLM-based relationship identification
+- Edge validation and deduplication
+- Creates complete knowledge graph (nodes + edges)
+
+### Phase 6 (NEW)
+- Graph structure validation (removes invalid edges, self-loops)
+- Edge quality filtering (confidence thresholds)
+- Duplicate edge merging with aggregated evidence
+- Conflict resolution with relation priority
+- NetworkX-based graph metrics (centrality, clustering)
+- Node importance scoring (occurrence + centrality)
+- Optional isolated node pruning
+- Visualization-ready output format
