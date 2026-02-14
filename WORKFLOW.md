@@ -1,6 +1,6 @@
 # Complete Workflow Example
 
-This guide shows how to run all four phases to build a semantic knowledge graph.
+This guide shows how to run all five phases to build a semantic knowledge graph.
 
 ## Prerequisites
 
@@ -95,6 +95,25 @@ This merges duplicate concepts and variants into canonical concepts with aliases
 
 **Note**: First run downloads sentence-transformers model (~80MB).
 
+### Step 5: Extract Relationships
+
+```bash
+# Extract relationships between canonical concepts
+uv run python relationship_extractor.py <doc_id> --debug
+
+# Process all documents
+uv run python relationship_extractor.py --all
+
+# Use different model
+uv run python relationship_extractor.py <doc_id> --model llama3.2:latest
+
+# Output: data/relationships/<doc_id>_relationships.json
+```
+
+This extracts relationships between concepts to build knowledge graph edges.
+
+**Note**: Requires Ollama to be running. Only extracts relationships grounded in text (no hallucination).
+
 ## Understanding the Output
 
 ### Phase 1 Output (docs)
@@ -157,6 +176,20 @@ This merges duplicate concepts and variants into canonical concepts with aliases
 ]
 ```
 
+### Phase 5 Output (relationships)
+```json
+[
+  {
+    "edge_id": "e_a3f8d2c1",
+    "source_concept_id": "cn_012",
+    "target_concept_id": "cn_001",
+    "relation_type": "USES",
+    "evidence_block_id": "b_045",
+    "confidence": 0.92
+  }
+]
+```
+
 ## Tips
 
 ### For Phase 1
@@ -182,6 +215,14 @@ This merges duplicate concepts and variants into canonical concepts with aliases
 - LLM verification is recommended for accuracy (can skip with `--skip-verification`)
 - Similarity threshold 0.80 works well (0.75-0.85 range)
 - Expect 50-70% reduction in concept count (duplicates merged)
+
+### For Phase 5
+- **IMPORTANT**: Ollama must be running!
+- Requires both Phase 2 (semantic blocks) and Phase 4 (canonical concepts)
+- Only extracts relationships from text (no hallucination or inference)
+- Use `--debug` to see candidate pairs and extraction details
+- Relationships are directional (source → target)
+- Confidence reflects how clearly the relationship is stated in text
 
 ## Troubleshooting
 
@@ -225,15 +266,30 @@ uv run python concept_extractor.py <doc_id>
 - Ensure stable internet connection
 - Model caches in ~/.cache/torch/sentence_transformers/
 
+### "Canonical concepts not found" (Phase 5)
+```bash
+# Run Phase 4 first
+uv run python concept_normalizer.py <doc_id>
+```
+
+### Phase 5 "No relationships extracted"
+- Check that concepts actually co-occur in blocks
+- Try with `--debug` to see candidate pairs
+- Verify Ollama is running and responsive
+
 ## Next Steps
 
-After Phase 4, you have:
+After Phase 5, you have:
 - Original documents (Phase 1)
 - Semantic blocks (Phase 2)  
 - Concept candidates (Phase 3)
 - Canonical concepts (Phase 4)
+- Concept relationships (Phase 5)
 
-Phase 5 (future) will:
-- Extract relationships between concepts
-- Build the final knowledge graph
-- Create graph visualization
+**Complete Knowledge Graph**: Nodes (canonical concepts) + Edges (relationships)
+
+Phase 6 (future) will:
+- Refine and prune weak edges
+- Score graph structure quality
+- Create interactive graph visualizations
+- Export to graph databases (Neo4j, etc.)

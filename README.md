@@ -108,6 +108,30 @@ uv run python concept_normalizer.py <doc_id> --similarity-threshold 0.85
 - First run of Phase 4 will download sentence-transformers model (~80MB)
 - LLM verification requires Ollama (can be skipped with `--skip-verification`)
 
+### Phase 5: Relationship Extraction
+
+Extract relationships between canonical concepts to build knowledge graph edges.
+
+```bash
+# List available documents
+uv run python relationship_extractor.py --list
+
+# Process a specific document
+uv run python relationship_extractor.py <doc_id> --debug
+
+# Process all documents
+uv run python relationship_extractor.py --all
+
+# Use different model
+uv run python relationship_extractor.py <doc_id> --model llama3.2:latest
+```
+
+**Output**: `data/relationships/<doc_id>_relationships.json` - Concept edges with relation types
+
+**Requirements**: Ollama must be running with llama3.1:8b model
+
+**Relation Types**: DEFINES, DEPENDS_ON, CAUSES, PART_OF, USES, EXTENDS, CONTRASTS_WITH, MEASURED_BY, ASSOCIATED_WITH
+
 ## Architecture
 
 ### Phase 1: Scraper
@@ -134,11 +158,49 @@ uv run python concept_normalizer.py <doc_id> --similarity-threshold 0.85
   - `parser.py`: JSON output parsing
   - `filters.py`: Concept quality filters
 
-### Storage
-- **data/docs/**: Phase 1 extracted documents
-- **data/semantic_blocks/**: Phase 2 semantic blocks
-- **data/concepts/**: Phase 3 concept candidates
+### Phase 4: Concept Normalizer
+- **normalization/**: Concept deduplication and canonicalization
+  - `models.py`: CanonicalConcept and cluster models
+  - `pipeline.py`: Main normalization pipeline
+  - `preprocessor.py`: String normalization
+  - `embedder.py`: Semantic embeddings
+  - `clustering.py`: Similarity-based clustering
+  - `verifier.py`: LLM verification
+  - `canonicalizer.py`: Canonical name selection
 
+### Phase 5: Relationship Extractor
+- **relationships/**: Graph edge extraction
+  - `models.py`: ConceptEdge data model
+  - `pipeline.py`: Main extraction pipeline
+  - `candidate_builder.py`: Concept-to-block mapping
+  - `extractor.py`: Ollama relationship extraction
+  - `prompts.py`: LLM prompt templates
+  - `parser.py`: JSON output parsing
+  - `validator.py`: Edge validation and deduplication
+
+### Storage
+- Local LLM concept extraction via Ollama
+- Structured extraction (NOT summarization)
+- Quality filtering (removes generic terms)
+- Concept types: core_concept, technique, metric, process, assumption
+- Confidence scoring and validation
+- Full source traceability (block → concept)
+
+### Phase 4
+- String normalization and exact deduplication
+- Semantic similarity clustering (sentence-transformers)
+- LLM verification to prevent bad merges
+- Canonical name selection and alias tracking
+- Importance scoring based on frequency and spread
+- Typical 50-70% reduction in concept count
+
+### Phase 5 (NEW)
+- Text-grounded relationship extraction (NO hallucination)
+- Strict relation type ontology (9 types)
+- Block-level concept co-occurrence analysis
+- LLM-based relationship identification
+- Edge validation and deduplication
+- Creates complete knowledge graph (nodes + edges
 ## Features
 
 ### Phase 1
