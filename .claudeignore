@@ -1,0 +1,8 @@
+venv/
+.venv/
+__pycache__/
+.git/
+*.wav
+*.mp3
+*.pth
+*.weights
