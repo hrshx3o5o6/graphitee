@@ -19,21 +19,30 @@ export default function App() {
 
   // Load available graphs on mount
   useEffect(() => {
-    listGraphs()
-      .then(graphs => {
-        setAvailableGraphs(graphs);
-        // Auto-load first graph if available
-        if (graphs.length > 0) {
-          loadGraph(graphs[0].id);
-        } else {
+    const initGraph = async () => {
+      // First try to load "current" graph (from CLI)
+      try {
+        await loadGraph('current');
+        // Current graph loaded successfully
+        setAvailableGraphs([{ id: 'current', name: 'Current Session' }]);
+      } catch {
+        // Fall back to list of saved graphs
+        try {
+          const graphs = await listGraphs();
+          setAvailableGraphs(graphs);
+          if (graphs.length > 0) {
+            await loadGraph(graphs[0].id);
+          } else {
+            setLoading(false);
+            setError('No graphs available. Please run Phase 6 to generate graphs.');
+          }
+        } catch (err) {
           setLoading(false);
-          setError('No graphs available. Please run Phase 6 to generate graphs.');
+          setError('Failed to load graphs: ' + err.message);
         }
-      })
-      .catch(err => {
-        setLoading(false);
-        setError('Failed to load graphs: ' + err.message);
-      });
+      }
+    };
+    initGraph();
   }, []);
 
   // Load specific graph

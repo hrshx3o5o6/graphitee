@@ -116,16 +116,10 @@ export default function GraphView({ graphData, onNodeClick, selectedNode }) {
     return 0.1;
   }, [highlightLinks]);
 
-  // Node label (show on hover or when selected)
+  // Node label - always show on hover, show selected node name
   const nodeLabel = useCallback((node) => {
-    if (hoverNode && node.id === hoverNode.id) {
-      return node.label;
-    }
-    if (selectedNode && node.id === selectedNode.id) {
-      return node.label;
-    }
-    return null; // Don't show labels by default to avoid clutter
-  }, [hoverNode, selectedNode]);
+    return node.label || node.name || node.id;
+  }, []);
 
   if (!graphData) {
     return (

@@ -1,334 +1,161 @@
-# Graphitee - Semantic Knowledge Graph Pipeline
+# Graphitee - Agentic Reading Companion
 
-A modular system for extracting, structuring, and organizing technical content into semantic knowledge graphs.
+An intelligent reading companion that transforms web articles into interactive knowledge graphs. Ask questions, explore concepts, and understand articles deeply with AI-powered assistance.
+
+## Features
+
+- **Knowledge Graph Exploration** - Visualize concepts and their relationships in 3D
+- **Smart Q&A** - Ask questions about the article and get context-aware answers
+- **Quality Analysis** - Assess article credibility, bias, and readability
+- **Prerequisite Detection** - Understand what knowledge you need before reading
+- **Concept Suggestions** - Get personalized recommendations on what to explore next
+- **Session Persistence** - Resume reading sessions anytime
+
+## Requirements
+
+- Python 3.10+
+- [Ollama](https://ollama.ai/) with llama3.1:8b model
+- [Playwright](https://playwright.dev/) browsers
+- Node.js (for frontend visualization)
+
+### Optional
+- [Tavily API](https://tavily.com/) key for web search / fact-checking
 
 ## Setup
 
 ```bash
-# Install dependencies (using uv)
-uv python install 3.13
-uv python pin 3.13
+# Clone and navigate to project
+cd graphitee
+
+# Install Python dependencies
 uv sync
 
 # Install Playwright browsers
 uv run playwright install chromium
 
-# Install and setup Ollama (for Phase 3)
-# macOS/Linux:
+# Setup Ollama (macOS)
 brew install ollama
 ollama serve
 ollama pull llama3.1:8b
+
+# Build frontend
+cd frontend && npm install && npm run build && cd ..
 ```
 
-## Usage
-
-### Phase 1: Article Scraping
-
-Extract structured content from web pages using Playwright.
+## Quick Start
 
 ```bash
-# Basic usage
-uv run python main.py <url>
-
-# With debug output
-uv run python main.py <url> --debug
-
-# Control crawl depth and max pages
-uv run python main.py <url> --depth 2 --max-pages 10
+# Start the CLI
+python cli.py
 ```
 
-**Output**: `data/docs/<doc_id>.json` - Structured documents with sections and content blocks
+### Example Session
 
-### Phase 2: Semantic Block Building
+```
+Graphitee - Agentic Reading Companion
+Type 'help' for available commands, 'quit' to exit
 
-Transform documents into semantic blocks (one idea per block).
+> load https://example.com/article
+Loading https://example.com/article...
+Loaded: **Article Title**
 
-```bash
-# List available documents
-uv run python semantic_builder.py --list
+Found 12 key concepts. You can ask me questions about this article, or try:
+- "ask [question]" - Ask anything about the article
+- "graph" - View the knowledge graph
+- "quality" - Check article quality and bias
+- "prereqs" - See what you should know first
 
-# Process a specific document
-uv run python semantic_builder.py <doc_id> --debug
+> ask What is the main argument?
+[AI answers based on article content]
 
-# Process all documents
-uv run python semantic_builder.py --all
+> graph
+[Opens 3D visualization in browser]
+
+> quality
+[Shows credibility, bias, readability analysis]
+
+> what next
+[Shows suggested concepts to explore]
 ```
 
-**Output**: `data/semantic_blocks/<doc_id>.json` - Semantic blocks with context and metadata
+## Commands
 
-### Phase 3: Concept Extraction
-
-Extract technical concepts from semantic blocks using local LLM (Ollama).
-
-```bash
-# List available documents
-uv run python concept_extractor.py --list
-
-# Process a specific document
-uv run python concept_extractor.py <doc_id> --debug
-
-# Process all documents
-uv run python concept_extractor.py --all
-
-# Test with limited blocks
-uv run python concept_extractor.py <doc_id> --max-blocks 5
-
-# Use different model or confidence threshold
-uv run python concept_extractor.py <doc_id> --model llama3.1:8b --min-confidence 0.6
-```
-
-**Output**: `data/concepts/<doc_id>_concepts.json` - Extracted concept candidates
-
-**Requirements**: Ollama must be running locally with llama3.1:8b model
-
-### Phase 4: Concept Normalization
-
-Normalize concept candidates into canonical concepts by merging duplicates and variants.
-
-```bash
-# List available documents
-uv run python concept_normalizer.py --list
-
-# Process a specific document
-uv run python concept_normalizer.py <doc_id> --debug
-
-# Process all documents
-uv run python concept_normalizer.py --all
-
-# Skip LLM verification (faster, less accurate)
-uv run python concept_normalizer.py <doc_id> --skip-verification
-
-# Adjust similarity threshold
-uv run python concept_normalizer.py <doc_id> --similarity-threshold 0.85
-```
-
-**Output**: `data/canonical/<doc_id>_canonical.json` - Normalized canonical concepts
-
-**Requirements**: 
-- First run of Phase 4 will download sentence-transformers model (~80MB)
-- LLM verification requires Ollama (can be skipped with `--skip-verification`)
-
-### Phase 5: Relationship Extraction
-
-Extract relationships between canonical concepts to build knowledge graph edges.
-
-```bash
-# List available documents
-uv run python relationship_extractor.py --list
-
-# Process a specific document
-uv run python relationship_extractor.py <doc_id> --debug
-
-# Process all documents
-uv run python relationship_extractor.py --all
-
-# Use different model
-uv run python relationship_extractor.py <doc_id> --model llama3.2:latest
-```
-
-**Output**: `data/relationships/<doc_id>_relationships.json` - Concept edges with relation types
-
-**Requirements**: Ollama must be running with llama3.1:8b model
-
-**Relation Types**: DEFINES, DEPENDS_ON, CAUSES, PART_OF, USES, EXTENDS, CONTRASTS_WITH, MEASURED_BY, ASSOCIATED_WITH
-
-### Phase 6: Graph Refinement & Final Assembly
-
-Refine and assemble the final knowledge graph from canonical concepts and relationships.
-
-```bash
-# List available documents
-uv run python graph_refiner.py --list
-
-# Process a specific document
-uv run python graph_refiner.py <doc_id> --debug
-
-# Process all documents
-uv run python graph_refiner.py --all
-
-# Adjust confidence threshold
-uv run python graph_refiner.py <doc_id> --min-confidence 0.6
-
-# Save visualization format (minimal payload)
-uv run python graph_refiner.py <doc_id> --viz-format
-
-# Keep isolated nodes (don't prune)
-uv run python graph_refiner.py <doc_id> --no-prune
-```
-
-**Output**: `data/graph/<doc_id>_final_graph.json` - Refined knowledge graph ready for visualization
-
-**Key Features**:
-- Edge quality filtering (removes low confidence < 0.55)
-- Duplicate edge merging
-- Conflict resolution with relation priority
-- Graph metrics (centrality, clustering)
-- Node importance scoring
-- Optional isolated node pruning
-
-### Phase 7: Interactive 3D Visualization
-
-3D interactive visualization of the knowledge graph using React + Three.js.
-
-```bash
-# First, build the frontend (one-time setup)
-cd frontend
-npm install
-npm run build
-cd ..
-
-# Start the visualization server
-uv run python viz_server.py
-
-# Or with custom port
-uv run python viz_server.py --port 8080
-```
-
-**Output**: Opens browser at `http://localhost:8000` with interactive 3D graph
-
-**Key Features**:
-- 3D force-directed graph layout (react-force-graph-3d)
-- Visual encoding: node size = importance, node color = type
-- Edge coloring by relation type with 9-color palette
-- Interactive highlighting (hover to highlight node + neighbors)
-- Node details panel (aliases, metrics, connections)
-- Camera controls (rotate, zoom, pan, double-click focus)
-- Graph selection dropdown (visualize any final graph)
-- Real-time stats (nodes, edges, relations, types)
-- No AI/LLM processing - pure deterministic visualization
+| Command | Description |
+|---------|-------------|
+| `load <url>` | Load and analyze an article |
+| `ask <question>` | Ask a question about the article |
+| `explore <concept>` | Explore a specific concept in depth |
+| `graph` | Open 3D knowledge graph visualization |
+| `quality` | Analyze article quality and bias |
+| `prereqs` | Show prerequisites for understanding |
+| `summarize` | Get article summary |
+| `what next` | Get suggested concepts to explore |
+| `help` | Show available commands |
+| `quit` | Exit the program |
 
 ## Architecture
 
-### Phase 1: Scraper
-- **scraper/**: Playwright-based DOM extraction
-- **storage/**: Data models and JSON storage
-- **utils/**: URL utilities
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         CLI                                  │
+│                    (Rich Terminal)                           │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Orchestrator                            │
+│  - Intent parsing (LLM)                                     │
+│  - Tool routing                                             │
+│  - State management (SQLite)                               │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+    ┌───────────────┬─────────┼─────────┬───────────────┐
+    ▼               ▼         ▼         ▼               ▼
+┌────────┐   ┌────────┐  ┌────────┐ ┌────────┐   ┌────────┐
+│Scraper │   │  LLM   │  │ Graph  │ │ Web    │   │Quality │
+│(Play-  │   │(Ollama)│  │Reasoner│ │Search  │   │Analyzer│
+│ wright)│   │         │  │        │ │(Tavily)│   │        │
+└────────┘   └────────┘  └────────┘ └────────┘   └────────┘
+```
 
-### Phase 2: Semantic Builder
-- **semantic/**: Deterministic semantic block builder
-  - `models.py`: SemanticBlock data model
-  - `builder.py`: Main pipeline
-  - `context.py`: Heading path resolution
-  - `splitter.py`: Semantic text splitting
-  - `heuristics.py`: Block type inference
-  - `tokenizer.py`: Token estimation
-  - `validator.py`: Validation logic
+### Key Components
 
-### Phase 3: Concept Extractor
-- **concepts/**: LLM-based concept extraction
-  - `models.py`: ConceptCandidate data model
-  - `pipeline.py`: Main extraction pipeline
-  - `extractor.py`: Ollama API integration
-  - `prompts.py`: LLM prompt templates
-  - `parser.py`: JSON output parsing
-  - `filters.py`: Concept quality filters
+- **agent/orchestrator.py** - Main agent loop, intent handling
+- **agent/state.py** - SQLite session management
+- **agent/reasoning.py** - Hybrid LLM + rule-based reasoning
+- **agent/graph_reasoner.py** - Graph queries, dependency analysis
+- **services/scraper.py** - Article scraping (tiered)
+- **services/llm.py** - Ollama wrapper
+- **services/tavily.py** - Web search for fact-checking
+- **viz_server.py** - 3D visualization server
+- **frontend/** - React 3D graph visualization
 
-### Phase 4: Concept Normalizer
-- **normalization/**: Concept deduplication and canonicalization
-  - `models.py`: CanonicalConcept and cluster models
-  - `pipeline.py`: Main normalization pipeline
-  - `preprocessor.py`: String normalization
-  - `embedder.py`: Semantic embeddings
-  - `clustering.py`: Similarity-based clustering
-  - `verifier.py`: LLM verification
-  - `canonicalizer.py`: Canonical name selection
+## Session Data
 
-### Phase 5: Relationship Extractor
-- **relationships/**: Graph edge extraction
-  - `models.py`: ConceptEdge data model
-  - `pipeline.py`: Main extraction pipeline
-  - `candidate_builder.py`: Concept-to-block mapping
-  - `extractor.py`: Ollama relationship extraction
-  - `prompts.py`: LLM prompt templates
-  - `parser.py`: JSON output parsing
-  - `validator.py`: Edge validation and deduplication
+Sessions are stored in SQLite at `~/.graphitee/sessions.db`:
 
-### Phase 6: Graph Refiner
-- **graph/**: Graph refinement and assembly
-  - `models.py`: GraphNode, GraphEdge, FinalGraph models
-  - `pipeline.py`: Main refinement pipeline
-  - `validator.py`: Graph structure validation
-  - `edge_refiner.py`: Edge merging, filtering, conflict resolution
-  - `metrics.py`: NetworkX-based graph metrics
-  - `scoring.py`: Node importance scoring
-  - `assembler.py`: Final graph assembly and pruning
+```bash
+# View sessions
+sqlite3 ~/.graphitee/sessions.db
 
-### Phase 7: Visualization
-- **frontend/**: React + Vite 3D visualization app
-  - `src/App.jsx`: Main application orchestrator
-  - `src/GraphView.jsx`: 3D ForceGraph3D component
-  - `src/NodePanel.jsx`: Node details sidebar
-  - `src/graphLoader.js`: API integration and visual encoding
-  - `package.json`: Dependencies (react-force-graph-3d, Three.js)
-- **viz_server.py**: HTTP server with REST API
-  - `/api/graphs`: List available graphs
-  - `/api/graph/<id>`: Get graph data
-  - Serves frontend static files from `dist/`
+# Query data
+SELECT * FROM sessions;
+SELECT * FROM messages;
+SELECT * FROM concept_states;
+```
 
-### Storage
-- **data/docs/**: Phase 1 extracted documents
-- **data/semantic_blocks/**: Phase 2 semantic blocks
-- **data/concepts/**: Phase 3 concept candidates
-- **data/canonical/**: Phase 4 canonical concepts
-- **data/relationships/**: Phase 5 concept edges
-- **data/graph/**: Phase 6 final refined graphs
+## Environment Variables
 
-## Features
+| Variable | Description |
+|----------|-------------|
+| `TAVILY_API_KEY` | Optional - for web search / fact-checking |
 
-### Phase 1
-- Pure Playwright DOM extraction (no BeautifulSoup)
-- Semantic content structuring with heading hierarchies
-- Controlled internal link crawling
-- Clean section tree building
+## Tech Stack
 
-### Phase 2
-- Deterministic semantic splitting (no AI/LLM)
-- Context-aware blocks with full heading paths
-- Heuristic-based type classification (definition, example, explanation, code, list)
-- Token estimation for downstream processing
-- Validation and statistics
+- **Backend**: Python 3.13, Ollama (llama3.1:8b), Playwright, SQLite
+- **Frontend**: React 18, Vite, Three.js, react-force-graph-3d
+- **CLI**: Rich (terminal UI)
 
-### Phase 3
-- Local LLM concept extraction via Ollama
-- Structured extraction (NOT summarization)
-- Quality filtering (removes generic terms)
-- Concept types: core_concept, technique, metric, process, assumption
-- Confidence scoring and validation
-- Full source traceability (block → concept)
+## License
 
-### Phase 4
-- String normalization and exact deduplication
-- Semantic similarity clustering (sentence-transformers)
-- LLM verification to prevent bad merges
-- Canonical name selection and alias tracking
-- Importance scoring based on frequency and spread
-- Typical 50-70% reduction in concept count
-
-### Phase 5
-- Text-grounded relationship extraction (NO hallucination)
-- Strict relation type ontology (9 types)
-- Block-level concept co-occurrence analysis
-- LLM-based relationship identification
-- Edge validation and deduplication
-- Creates complete knowledge graph (nodes + edges)
-
-### Phase 6
-- Graph structure validation (removes invalid edges, self-loops)
-- Edge quality filtering (confidence thresholds)
-- Duplicate edge merging with aggregated evidence
-- Conflict resolution with relation priority
-- NetworkX-based graph metrics (centrality, clustering)
-- Node importance scoring (occurrence + centrality)
-- Optional isolated node pruning
-- Visualization-ready output format
-
-### Phase 7 (NEW)
-- 3D force-directed graph visualization (react-force-graph-3d)
-- Visual encoding: size=importance, color=type/relation
-- Interactive node highlighting and navigation
-- Node details panel with metrics and connections
-- Camera controls (rotate, zoom, pan, focus)
-- Multi-graph support (dropdown selector)
-- REST API for graph data access
-- Pure visualization (no AI/LLM, no graph modification)
-- Requires Node.js for frontend build
+MIT
