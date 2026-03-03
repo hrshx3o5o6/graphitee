@@ -1,7 +1,7 @@
 [project]
 name = "graphitee"
 version = "0.1.0"
-description = "Semantic article ingestion system using Playwright"
+description = "Agentic semantic knowledge graph companion for reading"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
@@ -11,7 +11,13 @@ dependencies = [
     "sentence-transformers>=2.2.0",
     "numpy>=1.24.0",
     "networkx>=3.0.0",
+    "aiohttp>=3.9.0",
+    "aiofiles>=23.0.0",
+    "aiosqlite>=0.19.0",
+    "rich>=13.7.0",
+    "tavily>=0.2.0",
 ]
 
 [project.scripts]
 graphitee = "main:main"
+graphitee-cli = "cli:main"

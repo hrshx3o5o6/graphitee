@@ -14,14 +14,14 @@ class OllamaExtractor:
         self,
         model: str = "llama3.1:8b",
         base_url: str = "http://localhost:11434",
-        timeout: int = 60
+        timeout: int = 300
     ):
         """Initialize Ollama extractor.
         
         Args:
             model: Model name to use
             base_url: Ollama API base URL
-            timeout: Request timeout in seconds
+            timeout: Request timeout in seconds (default 5 minutes for complex tasks)
         """
         self.model = model
         self.base_url = base_url
