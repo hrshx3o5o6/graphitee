@@ -24,7 +24,7 @@ An intelligent reading companion that transforms web articles into interactive k
 ## Setup
 
 ```bash
-# Clone and navigate to project
+# Navigate to project
 cd graphitee
 
 # Install Python dependencies
@@ -106,7 +106,7 @@ Found 12 key concepts. You can ask me questions about this article, or try:
 │                     Orchestrator                            │
 │  - Intent parsing (LLM)                                     │
 │  - Tool routing                                             │
-│  - State management (SQLite)                               │
+│  - State management (SQLite)                                │
 └─────────────────────────────┬───────────────────────────────┘
                               │
     ┌───────────────┬─────────┼─────────┬───────────────┐
@@ -120,15 +120,16 @@ Found 12 key concepts. You can ask me questions about this article, or try:
 
 ### Key Components
 
-- **agent/orchestrator.py** - Main agent loop, intent handling
+- **cli.py** - Rich terminal UI, command routing
+- **agent/orchestrator.py** - Main agent loop, intent handling, coordinates all tools
 - **agent/state.py** - SQLite session management
-- **agent/reasoning.py** - Hybrid LLM + rule-based reasoning
-- **agent/graph_reasoner.py** - Graph queries, dependency analysis
-- **services/scraper.py** - Article scraping (tiered)
+- **agent/reasoning.py** - Intent parsing using LLM, quality analysis, summarization
+- **agent/graph_reasoner.py** - Manages in-memory knowledge graph (NetworkX)
+- **scraper/browser.py** - Playwright with stealth config for bot detection bypass
+- **services/scraper.py** - Tiered article scraping
 - **services/llm.py** - Ollama wrapper
-- **services/tavily.py** - Web search for fact-checking
 - **viz_server.py** - 3D visualization server
-- **frontend/** - React 3D graph visualization
+- **frontend/** - React + Three.js 3D graph visualization
 
 ## Session Data
 
