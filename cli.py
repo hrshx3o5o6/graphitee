@@ -176,9 +176,9 @@ class CLI:
             await asyncio.sleep(2)
 
             # Open browser
-            webbrowser.open("http://localhost:8000")
+            webbrowser.open("http://localhost:8080")
 
-            console.print("[success]Opened 3D graph at http://localhost:8000[/success]")
+            console.print("[success]Opened 3D graph at http://localhost:8080[/success]")
             console.print("[dim]Press Ctrl+C to stop the server when done[/dim]")
 
         except Exception as e:

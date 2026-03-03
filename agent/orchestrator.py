@@ -57,19 +57,21 @@ class Agent:
         """Load and analyze an article."""
         await self.state.connect()
 
-        # Create session
+        # Create a pending session; only activate it after successful scrape
         session_id = await self.state.create_session(url)
-        self._current_session_id = session_id
 
         # Scrape article (tier 1)
         scrape_tool = self.tool_registry.get("scrape_article")
         result = await scrape_tool.execute(session_id, self.state, url=url, tier=1)
 
         if not result.success:
+            await self.state.delete_session(session_id)
             await self.state.close()
             return AgentResponse(
                 message=f"Failed to load article: {result.error}", should_suggest=False
             )
+
+        self._current_session_id = session_id
 
         self._article_title = result.title
         self._article_content = result.content
@@ -121,8 +123,8 @@ Extract 8-15 most important concepts and their direct relationships."""
             if result and "nodes" in result:
                 self.graph_reasoner.load_graph(result)
         except Exception as e:
-            print(f"Graph building error: {e}")
-            # Create empty graph
+            print(f"Graph building warning (non-critical): {type(e).__name__}")
+            # Create empty graph - article still loads, just without initial graph visualization
             self.graph_reasoner.load_graph({"nodes": [], "edges": []})
 
     async def process_input(self, user_input: str) -> AgentResponse:
