@@ -71,6 +71,13 @@ class Agent:
                 message=f"Failed to load article: {result.error}", should_suggest=False
             )
 
+        await self.state.add_tool_execution(
+            session_id,
+            "scrape_article",
+            {"url": url, "tier": 1},
+            {"success": True, "title": result.title, "content_length": len(result.content)},
+        )
+
         self._current_session_id = session_id
 
         self._article_title = result.title
@@ -184,6 +191,9 @@ Extract 8-15 most important concepts and their direct relationships."""
 
         elif intent.type == IntentType.SUGGEST:
             return await self._get_suggestions()
+
+        elif intent.type == IntentType.FACT_CHECK:
+            return await self._fact_check(intent)
 
         elif intent.type == IntentType.NAVIGATE:
             concept = intent.entities.get("concept", "")
@@ -415,6 +425,67 @@ Readability: {result.get("readability", "unknown")}
             suggestions=[s.concept for s in suggestions_data[:3]],
             should_suggest=True,
         )
+
+    async def _fact_check(self, intent: Intent) -> AgentResponse:
+        """Use web search to fact-check a claim from the article."""
+        claim = intent.entities.get("claim", intent.entities.get("concept", ""))
+
+        if not claim:
+            return AgentResponse(
+                message="What claim would you like me to fact-check?",
+                should_suggest=False,
+            )
+
+        search_tool = self.tool_registry.get("web_search")
+        query = f"{claim} {self._article_title}"
+        result = await search_tool.execute(
+            self._current_session_id, self.state, query=query
+        )
+
+        await self.state.add_tool_execution(
+            self._current_session_id,
+            "web_search",
+            {"query": query},
+            {"success": result.success, "result_count": len(result.results)},
+        )
+
+        if not result.success:
+            return AgentResponse(
+                message=f"Fact-check unavailable: {result.error}",
+                should_suggest=False,
+            )
+
+        if not result.results:
+            return AgentResponse(
+                message=f'No external sources found for "{claim}". Cannot verify this claim.',
+                should_suggest=False,
+            )
+
+        sources_text = "\n".join(
+            [
+                f"- [{r['title']}]({r['url']}): {r['content']}"
+                for r in result.results[:3]
+            ]
+        )
+
+        prompt = f"""Given these web search results, assess whether the following claim from the article is accurate.
+
+Claim: {claim}
+
+Sources:
+{sources_text}
+
+Provide a brief verdict (Supported / Contradicted / Unclear) and a 1-2 sentence explanation."""
+
+        try:
+            llm_result = self.llm.generate(prompt=prompt, temperature=0.3)
+            verdict = llm_result.content.strip()
+        except Exception:
+            verdict = "Unable to assess claim automatically."
+
+        message = f"**Fact-Check: {claim}**\n\n{verdict}\n\n**Sources checked:**\n{sources_text}"
+
+        return AgentResponse(message=message, should_suggest=False)
 
     async def close(self):
         """Clean up resources."""

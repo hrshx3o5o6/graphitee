@@ -82,7 +82,7 @@ Analyze the input and determine the intent. Return JSON only."""
                 prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.3
             )
 
-            intent_str = result.get("intent", "unknown").upper()
+            intent_str = result.get("intent", "unknown").lower()
             try:
                 intent_type = IntentType(intent_str)
             except ValueError:
