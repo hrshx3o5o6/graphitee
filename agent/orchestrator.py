@@ -480,8 +480,8 @@ Provide a brief verdict (Supported / Contradicted / Unclear) and a 1-2 sentence 
         try:
             llm_result = self.llm.generate(prompt=prompt, temperature=0.3)
             verdict = llm_result.content.strip()
-        except Exception:
-            verdict = "Unable to assess claim automatically."
+        except Exception as e:
+            verdict = f"LLM assessment failed: {type(e).__name__}. Review the sources below manually."
 
         message = f"**Fact-Check: {claim}**\n\n{verdict}\n\n**Sources checked:**\n{sources_text}"
 
