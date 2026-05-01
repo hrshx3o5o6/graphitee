@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Graphitee is an "Agentic Reading Companion" - a CLI tool that transforms web articles into interactive knowledge graphs using AI. It scrapes articles, extracts concepts/relationships, and provides Q&A, quality analysis, and 3D visualization.
+Graphitee is an agentic reading companion that transforms web articles into interactive knowledge graphs. It uses AI (Ollama with llama3.1:8b) to extract concepts and relationships, enabling Q&A, quality analysis, and 3D visualization.
 
 ## Common Commands
 
@@ -15,13 +15,16 @@ uv sync
 # Install Playwright browsers
 uv run playwright install chromium
 
-# Run the CLI
+# Run CLI
 python cli.py
 
 # Build frontend (for 3D visualization)
 cd frontend && npm install && npm run build && cd ..
 
-# Setup Ollama (macOS)
+# Start visualization server separately
+python viz_server.py
+
+# Ollama setup (macOS)
 brew install ollama
 ollama serve
 ollama pull llama3.1:8b
@@ -29,58 +32,53 @@ ollama pull llama3.1:8b
 
 ## Architecture
 
-### Data Flow
 ```
-URL → BrowserManager (Playwright stealth) → Crawler → ContentExtractor
-                                                         ↓
-                                                    DOMCleaner
-                                                         ↓
-                                                    SectionBuilder
-                                                         ↓
-                                                    Document (sections + links)
-
-Article Content → LLM (Ollama) → Concepts + Relationships → GraphReasoner
+CLI (Rich Terminal)
+        │
+        ▼
+Orchestrator (agent/orchestrator.py)
+        │
+        ├─► Scraping Service (Playwright) ─► Browser Manager (stealth config)
+        ├─► LLM Service (Ollama)
+        ├─► Graph Reasoner (NetworkX)
+        ├─► State Manager (SQLite)
+        └─► Tools (scrape, query_graph, web_search)
 ```
 
-### Key Components
+### Core Flow
+1. User loads URL via CLI → Orchestrator routes to ScrapeTool
+2. BrowserManager (scraper/browser.py) fetches page with stealth config
+3. ContentExtractor extracts sections/links → SectionBuilder builds hierarchy
+4. LLM extracts concepts/relationships → GraphReasoner builds knowledge graph
+5. User can query, explore concepts, view 3D graph, analyze quality
 
-- **CLI** (`cli.py`) - Rich terminal UI, command routing
-- **Orchestrator** (`agent/orchestrator.py`) - Main agent loop, intent handling, coordinates all tools
-- **Reasoning** (`agent/reasoning.py`) - Intent parsing using LLM, quality analysis, summarization
-- **GraphReasoner** (`agent/graph_reasoner.py`) - Manages in-memory knowledge graph (NetworkX)
-- **State** (`agent/state.py`) - SQLite session persistence at `~/.graphitee/sessions.db`
-- **Scraper** (`services/scraper.py`, `scraper/`) - Tiered article scraping via Playwright
-- **LLM** (`services/llm.py`) - Ollama wrapper (llama3.1:8b)
-- **BrowserManager** (`scraper/browser.py`) - Playwright with stealth config for bot detection bypass
+### Key Files
+- `cli.py` - Terminal UI with Rich
+- `agent/orchestrator.py` - Main agent coordinator, intent routing
+- `agent/reasoning.py` - Intent parsing (LLM-based), quality analysis
+- `agent/graph_reasoner.py` - Concept graph management using NetworkX
+- `agent/state.py` - SQLite session persistence
+- `scraper/browser.py` - Playwright browser with stealth configuration (bypasses bot detection)
+- `scraper/crawler.py` - Recursive link crawling (configurable depth)
+- `scraper/extractor.py` - DOM content extraction
+- `services/llm.py` - Ollama wrapper for LLM calls
 
-### Intent System
+### Scraping Pipeline (scraper/ folder)
+- `browser.py` - Launches Chromium with stealth args, handles Cloudflare challenges
+- `crawler.py` - Crawls internal links recursively (max_depth configurable)
+- `extractor.py` - Extracts content blocks (headings, paragraphs, code, lists)
+- `cleaner.py` - Finds main content area, filters unwanted elements
+- `section_builder.py` - Builds hierarchical section tree from blocks
 
-The orchestrator uses `agent/reasoning.py` to parse user input into intents:
-- `ASK_QUESTION` - Query article content
-- `EXPLAIN_CONCEPT` - Deep dive into a concept
-- `VIEW_GRAPH` - Open 3D visualization
-- `QUALITY_CHECK` - Analyze credibility/bias
-- `PREREQUISITES` - Show prerequisites
-- `SUMMARIZE` - Generate summary
-- `SUGGEST` - Get next concept suggestions
+## Configuration
 
-## Key Technical Details
+- Session data: `~/.graphitee/sessions.db` (SQLite)
+- Graph data output: `data/current_graph.json`
+- Environment: `TAVILY_API_KEY` (optional, for web search)
 
-### Scraper Tiers
-- **Tier 1**: `max_depth=0`, `max_pages=1` - Quick summary
-- **Tier 2**: `max_depth=1`, `max_pages=3` - Full content + internal links
+## Important Notes
 
-### Browser Stealth Config
-The `BrowserManager` includes stealth configuration to bypass bot detection:
-- `--disable-blink-features=AutomationControlled` flag
-- Custom user-agent, viewport, locale
-- Init scripts to mask `navigator.webdriver`, mock plugins/languages
-
-### Session Storage
-SQLite at `~/.graphitee/sessions.db` with tables:
-- `sessions` - Article metadata
-- `messages` - Conversation history
-- `concept_states` - Explored/unexplored concepts
-
-### Environment Variables
-- `TAVILY_API_KEY` - Optional, for web search/fact-checking
+- Browser stealth config is in `scraper/browser.py` - includes user-agent spoofing, automation flag removal, Cloudflare challenge handling
+- Scraper tier system: tier=1 (quick, depth=0), tier=2 (full, depth=1, max 3 pages)
+- Intent types defined in `agent/reasoning.py` - maps user queries to actions
+- Knowledge graph uses NetworkX for concept relationships and dependency analysis

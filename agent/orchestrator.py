@@ -25,12 +25,34 @@ class Agent:
     """Main agent orchestrator."""
 
     def __init__(
-        self, state: Optional[StateManager] = None, llm: Optional[OllamaLLM] = None
+        self,
+        state: Optional[StateManager] = None,
+        llm: Optional[OllamaLLM] = None,
+        neo4j_uri: Optional[str] = None,
+        neo4j_user: Optional[str] = None,
+        neo4j_password: Optional[str] = None,
     ):
+        import os
+
         self.state = state or StateManager()
         self.llm = llm or OllamaLLM()
         self.reasoning = ReasoningEngine(self.llm)
-        self.graph_reasoner = GraphReasoner()
+
+        # Initialize GraphReasoner with Neo4j config
+        self.graph_reasoner = None
+        try:
+            self.graph_reasoner = GraphReasoner(
+                neo4j_uri=neo4j_uri or os.getenv("NEO4J_URI"),
+                neo4j_user=neo4j_user or os.getenv("NEO4J_USER"),
+                neo4j_password=neo4j_password or os.getenv("NEO4J_PASSWORD"),
+            )
+        except (ImportError, Exception) as e:
+            # Fallback to in-memory if neo4j-graphrag not available
+            print(f"Warning: {e}")
+            print("Using in-memory graph reasoner")
+            from agent.graph_reasoner import GraphReasoner
+
+            self.graph_reasoner = GraphReasoner()
         self.tool_registry = ToolRegistry()
 
         self._current_session_id: Optional[str] = None
@@ -104,7 +126,16 @@ Found {len(all_concepts)} key concepts. You can ask me questions about this arti
         )
 
     async def _build_graph_from_content(self, content: str):
-        """Build a simple graph from article content using LLM."""
+        """Build knowledge graph from article content using Neo4j GraphRAG."""
+        try:
+            # Try using Neo4j GraphRAG pipeline
+            if hasattr(self.graph_reasoner, "build_graph"):
+                await self.graph_reasoner.build_graph(content)
+                return
+        except Exception as e:
+            print(f"Neo4j GraphRAG pipeline warning: {type(e).__name__} - {e}")
+
+        # Fallback to simple LLM-based extraction
         prompt = f"""Extract key concepts and their relationships from this article content.
 
 Content:
@@ -203,8 +234,24 @@ Extract 8-15 most important concepts and their direct relationships."""
         if concept_from_question:
             return await self._explain_concept(concept_from_question)
 
-        # Otherwise, use LLM to answer from article content
-        prompt = f"""Based on this article, answer the user's question.
+        # Use GraphRAG for context retrieval
+        graph_context = ""
+        if self.graph_reasoner and not self.graph_reasoner.is_empty():
+            graph_context = self.graph_reasoner.retrieve(user_input, top_k=5)
+
+        # Build prompt with graph-augmented context
+        if graph_context:
+            prompt = f"""Answer the user's question using the knowledge graph context below.
+
+Knowledge Graph Context:
+{graph_context}
+
+Question: {user_input}
+
+Provide a clear, accurate answer based on the knowledge graph context."""
+        else:
+            # Fallback to raw article content
+            prompt = f"""Based on this article, answer the user's question.
 
 Article:
 {self._article_content[:2500]}

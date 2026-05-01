@@ -16,6 +16,9 @@ dependencies = [
     "aiosqlite>=0.19.0",
     "rich>=13.7.0",
     "tavily>=0.2.0",
+    # Neo4j GraphRAG
+    "neo4j-graphrag[ollama]>=1.0.0",
+    "neo4j>=5.18",
 ]
 
 [project.scripts]
